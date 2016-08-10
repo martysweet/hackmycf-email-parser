@@ -21,7 +21,7 @@ def main():
 
     val = {}
     val['cf_version'] = extract_value("ColdFusion Version:\*\ ([0-9,]+)")
-    val['os_version'] = extract_value("Operating System:\*\ ([\w0-9 ]+) *")
+    val['os_version'] = extract_value("Operating System:\*\ ([\w0-9\. ]+) *")
     val['web_server'] = extract_value("Web Server:\*\ ([\w0-9\-//0-9/. ]+) *")
     val['hostname'] = extract_value("Report \[([\w\.]+)\]")
 
@@ -41,9 +41,10 @@ def main():
         for x in cfissues + cfapsb:
             val['hotfix_' + x[0]] = x[1].lower()
 
-        # TODO: Connectors
-
-
+        # Connector Summary (No clear way to extract information)
+        val['connectors'] = extract_value("Newer Connector Available").lower()
+        if val['connectors'] == 'null':
+            val['connectors'] = 'up to date'
 
     else:
         val['probe_enabled'] = 'false'
