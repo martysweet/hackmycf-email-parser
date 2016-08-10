@@ -2,22 +2,41 @@ from __future__ import print_function
 
 import re
 import string
+import boto3
+import urllib
 
+
+s3 = boto3.client('s3')
+s3r = boto3.resource('s3')
+
+parser_type = "hackmycf"
+bucket = key = ""
 contents = ""
+debug = False
+
 
 def main():
-    global contents
+    # Main function used for debugging
+    global debug
+    event = context = {}
+    debug = True
+    lambda_handler(event, context)
 
-    contents = open("file.txt", 'rU').read()
+
+def lambda_handler(event, context):
+
+    global contents
+    get_s3_params(event)
+    fetch_ses_s3_email()
 
     # Check this is a CF report
     if "ColdFusion Server Security Report" not in contents:
         print("Not a valid email. Exiting.")
-        stop_lambda()
+        return
 
     # Remove linebreaks for simple REGEX
-    nonlinebreak = contents
-    contents = string.replace(contents, '\n', ' ')
+    nonlinebreak = contents # Used for special REGEX
+    contents = string.replace(nonlinebreak, '\n', ' ')
 
     val = {}
     val['cf_version'] = extract_value("ColdFusion Version:\*\ ([0-9,]+)")
@@ -80,7 +99,6 @@ def main():
     else:
         val['https_enabled'] = 'false'
 
-
     # Security Issues Summary
     val['critical_count'] = extract_value("Found ([0-9]+) Critical Issues")
     val['important_count'] = extract_value("Found ([0-9]+) Important Issues")
@@ -92,13 +110,56 @@ def main():
     val['important_issues'] = get_issue_summary('important', nonlinebreak)
     val['warning_issues'] = get_issue_summary('warning', nonlinebreak)
 
+    # Debug if needed
+    if debug:
+        debug_output(val)
 
-    #
-    debug_output(val)
+    # Key Value output for Splunk
+    print(keyval_output(val))
+
+    return
 
 
-def stop_lambda():
-    exit()
+def keyval_output(values):
+    global parser_type
+    buf = 'parser_type="' + parser_type + '" '
+    for y in values:
+        buf += y + '="' + values[y] + '" '
+    return buf
+
+
+def get_s3_params(event):
+    global bucket, key, debug
+    if not debug:
+        bucket = event['Records'][0]['s3']['bucket']['name']
+        key = urllib.unquote_plus(event['Records'][0]['s3']['object']['key']).decode('utf8')
+
+
+def fetch_ses_s3_email():
+    global contents, debug, bucket, key
+    if debug:
+        contents = open("file.txt", 'rU').read()
+    else:
+        try:
+            waiter = s3.get_waiter('object_exists')
+            waiter.wait(Bucket=bucket, Key=key)
+
+            response = s3r.Bucket(bucket).Object(key)
+            contents = response.get()["Body"].read()
+        except Exception as e:
+            print(e)
+            print('Error getting object {} from bucket {}. Make sure they exist '
+                  'and your bucket is in the same region as this '
+                  'function.'.format(key, bucket))
+
+
+def remove_ses_s3_email():
+    global debug, bucket, key
+    if not debug:
+        try:
+            s3.delete_object(Bucket=bucket, Key=key)
+        except Exception as e:
+            print(e)
 
 
 def get_truststore_state(store):
