@@ -115,6 +115,7 @@ def lambda_handler(event, context):
         debug_output(val)
 
     # Key Value output for Splunk
+    remove_ses_s3_email()
     print(keyval_output(val))
 
     return
