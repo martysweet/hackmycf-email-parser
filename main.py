@@ -172,7 +172,7 @@ def get_cipher_state(cipher):
 
 
 def get_issue_summary(mode, buffer):
-    regex = mode + "\n[ ]*([\w //]+)"
+    regex = "[ ]{0,5}"+ mode + "\n[ ]*([\w //]+)"
     value = ", ".join(re.findall(regex, buffer))
     if value:
         return value
