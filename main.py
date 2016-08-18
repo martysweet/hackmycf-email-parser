@@ -9,7 +9,7 @@ import urllib
 s3 = boto3.client('s3')
 s3r = boto3.resource('s3')
 
-parser_type = "hackmycf_v1.0"
+parser_type = "hackmycf_v1.1"
 bucket = key = ""
 contents = ""
 debug = False
