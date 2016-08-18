@@ -42,6 +42,8 @@ def lambda_handler(event, context):
     val['cf_version'] = extract_value("ColdFusion Version:\*\ ([0-9,]+)")
     val['os_version'] = extract_value("Operating System:\*\ ([\w0-9\. ]+) *")
     val['web_server'] = extract_value("Web Server:\*\ ([\w0-9\-//0-9/. ]+) *")
+    if val['web_server'] == "NULL":
+        val['web_server'] = extract_value("Web Server Software:\*\ ([\w0-9\-//0-9/. ]+) *")
     val['hostname'] = extract_value("Report \[([\w\.]+)\]")
 
     if extract_value("Probe API Version:\*[ ]*([0-9\.]+)") != "NULL":
